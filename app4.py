@@ -12,6 +12,7 @@ from banco4 import (
     exportar_saidas_csv,
     remover_produto
 )
+import csv
 
 class App:
     def __init__(self, root):
@@ -106,6 +107,7 @@ class App:
         tk.Label(frame, text="Quantidade:").grid(row=2, column=0)
         e_quant = tk.Entry(frame)
         e_quant.grid(row=2, column=1)
+
         def cadastrar():
             if not e_nome.get() or not e_desc.get() or not e_quant.get():
                 messagebox.showwarning("Aviso", "Preencha todos os campos.")
@@ -116,7 +118,35 @@ class App:
                 messagebox.showinfo("Sucesso", "Produto cadastrado.")
             except ValueError:
                 messagebox.showerror("Erro", "Quantidade deve ser número.")
-        tk.Button(frame, text="Cadastrar", command=cadastrar).grid(row=3, columnspan=2)
+
+        def importar_csv():
+            caminho = filedialog.askopenfilename(
+                filetypes=[("CSV files", "*.csv")], 
+                title="Selecione o arquivo CSV"
+            )
+            if not caminho:
+                return
+            try:
+                with open(caminho, newline='', encoding='utf-8') as arquivo_csv:
+                    leitor = csv.reader(arquivo_csv)
+                    next(leitor)  # Pula o cabeçalho
+                    count = 0
+                    for linha in leitor:
+                        if len(linha) >= 3:
+                            nome_csv = linha[0].strip()
+                            desc_csv = linha[1].strip()
+                            try:
+                                quant_csv = int(linha[2])
+                                adicionar_produto(nome_csv, desc_csv, quant_csv)
+                                count += 1
+                            except ValueError:
+                                continue
+                    messagebox.showinfo("Importação concluída", f"{count} produtos importados com sucesso.")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao importar CSV:\n{e}")
+
+        tk.Button(frame, text="Cadastrar", command=cadastrar).grid(row=3, columnspan=2, pady=(10, 0))
+        tk.Button(frame, text="Importar CSV", command=importar_csv).grid(row=4, columnspan=2, pady=(10, 0))
 
     def tela_consulta_produtos(self):
         self.janela_popup("Produtos", self.frame_lista_produtos)
@@ -142,6 +172,7 @@ class App:
         tk.Label(frame, text="Quantidade:").grid(row=1, column=0)
         e_quant = tk.Entry(frame)
         e_quant.grid(row=1, column=1)
+
         def registrar():
             if not cb.get() or not e_quant.get():
                 messagebox.showwarning("Aviso", "Preencha todos os campos.")
@@ -155,6 +186,7 @@ class App:
                     messagebox.showerror("Erro", "Estoque insuficiente.")
             except ValueError:
                 messagebox.showerror("Erro", "Quantidade inválida.")
+
         tk.Button(frame, text="Registrar", command=registrar).grid(row=2, columnspan=2)
 
     def tela_historico_saida(self):
@@ -171,54 +203,49 @@ class App:
         tree.pack(expand=True, fill="both")
 
     def tela_estoque_baixo(self):
-        self.janela_popup("Estoque Baixo", self.frame_estoque)
+        self.janela_popup("Estoque Baixo", self.frame_estoque_baixo)
 
-    def frame_estoque(self, frame):
+    def frame_estoque_baixo(self, frame):
         produtos = produtos_estoque_baixo()
-        tree = ttk.Treeview(frame, columns=("Nome", "Quantidade"), show="headings")
+        tree = ttk.Treeview(frame, columns=("Nome", "Descrição", "Quantidade"), show="headings")
         tree.heading("Nome", text="Nome")
+        tree.heading("Descrição", text="Descrição")
         tree.heading("Quantidade", text="Quantidade")
         for p in produtos:
-            tree.insert("", "end", values=(p[1], p[3]))
+            tree.insert("", "end", values=(p[1], p[2], p[3]))
         tree.pack(expand=True, fill="both")
 
     def exportar_dados(self):
-        caminho = filedialog.asksaveasfilename(defaultextension=".csv")
+        caminho = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
         if caminho:
             exportar_saidas_csv(caminho)
-            messagebox.showinfo("Sucesso", "Dados exportados para CSV.")
+            messagebox.showinfo("Sucesso", "Arquivo CSV exportado.")
 
-    # MÉTODO NOVO PARA REMOVER PRODUTO
     def tela_remover_produto(self):
         self.janela_popup("Remover Produto", self.frame_remover_produto)
 
     def frame_remover_produto(self, frame):
         produtos = obter_produtos()
-        tk.Label(frame, text="Selecione o produto para remover:").pack(pady=10)
+        tk.Label(frame, text="Selecione o produto para remover:").pack()
         cb = ttk.Combobox(frame, values=[f"{p[0]} - {p[1]}" for p in produtos])
-        cb.pack(pady=10)
+        cb.pack()
 
         def remover():
             if not cb.get():
                 messagebox.showwarning("Aviso", "Selecione um produto.")
                 return
-            produto_id = int(cb.get().split(" - ")[0])
-            if remover_produto(produto_id):
-                messagebox.showinfo("Sucesso", "Produto removido com sucesso.")
-                frame.master.destroy()  # Fecha o popup
-            else:
-                messagebox.showerror("Erro", "Não é possível remover produto com vendas registradas.")
+            id_produto = int(cb.get().split(" - ")[0])
+            remover_produto(id_produto)
+            messagebox.showinfo("Sucesso", "Produto removido.")
 
         tk.Button(frame, text="Remover", command=remover).pack(pady=10)
 
-    def janela_popup(self, titulo, frame_func):
-        popup = tk.Toplevel(self.root)
+    def janela_popup(self, titulo, func_frame):
+        popup = tk.Toplevel()
         popup.title(titulo)
-        popup.geometry("500x400")
-        popup.configure(bg="#ecf0f1")
-        frame = tk.Frame(popup, bg="#ecf0f1")
-        frame.pack(padx=10, pady=10, expand=True, fill="both")
-        frame_func(frame)
+        frame = tk.Frame(popup)
+        frame.pack(padx=10, pady=10)
+        func_frame(frame)
 
 if __name__ == "__main__":
     root = tk.Tk()

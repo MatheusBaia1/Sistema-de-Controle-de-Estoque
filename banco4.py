@@ -155,3 +155,21 @@ def remover_produto(produto_id):
     con.commit()
     con.close()
     return True
+
+def importar_produtos_csv(caminho):
+    con = sqlite3.connect("sistema.db")
+    cur = con.cursor()
+    with open(caminho, newline='', encoding='utf-8') as f:
+        leitor = csv.reader(f)
+        next(leitor, None)  # Pula o cabeçalho
+        for linha in leitor:
+            if len(linha) != 3:
+                continue  # Ignora linhas malformadas
+            nome, descricao, quantidade = linha
+            try:
+                quantidade = int(quantidade)
+                cur.execute("INSERT INTO produtos (nome, descricao, quantidade) VALUES (?, ?, ?)", (nome, descricao, quantidade))
+            except ValueError:
+                continue  # Ignora se a quantidade não for número
+    con.commit()
+    con.close()

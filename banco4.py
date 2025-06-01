@@ -2,22 +2,26 @@ import sqlite3
 from datetime import datetime
 import csv
 
-# Conexão e configuração inicial
+# Conexão com banco
 def conectar():
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
+
+    # Tabelas
     cur.execute('''CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         senha TEXT NOT NULL,
         tipo TEXT NOT NULL CHECK (tipo IN ('admin', 'vendedor', 'usuario'))
     )''')
+
     cur.execute('''CREATE TABLE IF NOT EXISTS produtos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
         descricao TEXT NOT NULL,
         quantidade INTEGER NOT NULL
     )''')
+
     cur.execute('''CREATE TABLE IF NOT EXISTS vendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         produto_id INTEGER,
@@ -25,12 +29,16 @@ def conectar():
         data TEXT,
         FOREIGN KEY (produto_id) REFERENCES produtos(id)
     )''')
+
+    # Admin padrão
     cur.execute("SELECT * FROM usuarios WHERE username = 'admin'")
     if not cur.fetchone():
         cur.execute("INSERT INTO usuarios (username, senha, tipo) VALUES (?, ?, ?)", ("admin", "admin", "admin"))
+
     con.commit()
     con.close()
 
+# Login
 def validar_login(username, senha):
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
@@ -39,6 +47,7 @@ def validar_login(username, senha):
     con.close()
     return usuario
 
+# Cadastro de usuário
 def cadastrar_usuario(username, senha, tipo):
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
@@ -51,6 +60,7 @@ def cadastrar_usuario(username, senha, tipo):
     finally:
         con.close()
 
+# Produtos
 def adicionar_produto(nome, descricao, quantidade):
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
@@ -66,20 +76,69 @@ def obter_produtos():
     con.close()
     return produtos
 
+def remover_produto(produto_id):
+    con = sqlite3.connect("sistema.db")
+    cur = con.cursor()
+    cur.execute("DELETE FROM produtos WHERE id=?", (produto_id,))
+    con.commit()
+    con.close()
+    return True
+
+def produtos_estoque_baixo(limite=5):
+    con = sqlite3.connect("sistema.db")
+    cur = con.cursor()
+    cur.execute("SELECT * FROM produtos WHERE quantidade <= ?", (limite,))
+    produtos = cur.fetchall()
+    con.close()
+    return produtos
+
+# Função nova: importar produtos via CSV
+def importar_produtos_csv(caminho_csv):
+    try:
+        with open(caminho_csv, newline='', encoding='utf-8') as arquivo:
+            leitor = csv.DictReader(arquivo)
+            con = sqlite3.connect("sistema.db")
+            cur = con.cursor()
+            for linha in leitor:
+                nome = linha.get('nome')
+                descricao = linha.get('descricao')
+                quantidade = linha.get('quantidade')
+                if nome and descricao and quantidade and quantidade.isdigit():
+                    # Verifica se produto já existe pelo nome
+                    cur.execute("SELECT id FROM produtos WHERE nome=?", (nome,))
+                    produto_existente = cur.fetchone()
+                    if produto_existente:
+                        # Atualiza a quantidade do produto existente somando a nova
+                        cur.execute("UPDATE produtos SET quantidade = quantidade + ? WHERE id=?", (int(quantidade), produto_existente[0]))
+                    else:
+                        # Insere novo produto
+                        cur.execute("INSERT INTO produtos (nome, descricao, quantidade) VALUES (?, ?, ?)", (nome, descricao, int(quantidade)))
+                else:
+                    con.close()
+                    return False, f"Erro no arquivo CSV: linha com dados inválidos ({linha})"
+            con.commit()
+            con.close()
+        return True, "Produtos importados com sucesso."
+    except Exception as e:
+        return False, f"Erro ao importar CSV: {e}"
+
+# Saídas / Vendas
 def registrar_saida(produto_id, quantidade):
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
     cur.execute("SELECT quantidade FROM produtos WHERE id=?", (produto_id,))
     estoque = cur.fetchone()
+
     if estoque and estoque[0] >= quantidade:
-        nova_quantidade = estoque[0] - quantidade
-        cur.execute("UPDATE produtos SET quantidade=? WHERE id=?", (nova_quantidade, produto_id))
+        nova_qtd = estoque[0] - quantidade
+        cur.execute("UPDATE produtos SET quantidade=? WHERE id=?", (nova_qtd, produto_id))
         cur.execute("INSERT INTO vendas (produto_id, quantidade, data) VALUES (?, ?, ?)",
                     (produto_id, quantidade, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         con.commit()
         sucesso = True
     else:
         sucesso = False
+
     con.close()
     return sucesso
 
@@ -98,7 +157,7 @@ def obter_saidas():
     con.close()
     return vendas
 
-def excluir_saidas(venda_id):
+def excluir_saida(venda_id):
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
     cur.execute("SELECT produto_id, quantidade FROM vendas WHERE id=?", (venda_id,))
@@ -116,10 +175,10 @@ def editar_saida(venda_id, nova_quantidade):
     cur.execute("SELECT produto_id, quantidade FROM vendas WHERE id=?", (venda_id,))
     venda = cur.fetchone()
     if venda:
-        produto_id, antiga_quantidade = venda
+        produto_id, qtd_antiga = venda
         cur.execute("SELECT quantidade FROM produtos WHERE id=?", (produto_id,))
         estoque_atual = cur.fetchone()[0]
-        diferenca = nova_quantidade - antiga_quantidade
+        diferenca = nova_quantidade - qtd_antiga
         if estoque_atual >= diferenca:
             cur.execute("UPDATE vendas SET quantidade=? WHERE id=?", (nova_quantidade, venda_id))
             cur.execute("UPDATE produtos SET quantidade = quantidade - ? WHERE id=?", (diferenca, produto_id))
@@ -132,44 +191,9 @@ def editar_saida(venda_id, nova_quantidade):
     con.close()
     return sucesso
 
-def produtos_estoque_baixo(limite=5):
-    con = sqlite3.connect("sistema.db")
-    cur = con.cursor()
-    cur.execute("SELECT * FROM produtos WHERE quantidade <= ?", (limite,))
-    produtos = cur.fetchall()
-    con.close()
-    return produtos
-
 def exportar_saidas_csv(caminho):
     vendas = obter_saidas()
-    with open(caminho, 'w', newline='') as f:
-        escritor = csv.writer(f)
-        escritor.writerow(['ID', 'Produto', 'Quantidade', 'Data'])
-        escritor.writerows(vendas)
-
-def remover_produto(produto_id):
-    con = sqlite3.connect("sistema.db")
-    cur = con.cursor()
-    # Não verifica vendas associadas, apenas apaga o produto
-    cur.execute("DELETE FROM produtos WHERE id=?", (produto_id,))
-    con.commit()
-    con.close()
-    return True
-
-def importar_produtos_csv(caminho):
-    con = sqlite3.connect("sistema.db")
-    cur = con.cursor()
-    with open(caminho, newline='', encoding='utf-8') as f:
-        leitor = csv.reader(f)
-        next(leitor, None)  # Pula o cabeçalho
-        for linha in leitor:
-            if len(linha) != 3:
-                continue  # Ignora linhas malformadas
-            nome, descricao, quantidade = linha
-            try:
-                quantidade = int(quantidade)
-                cur.execute("INSERT INTO produtos (nome, descricao, quantidade) VALUES (?, ?, ?)", (nome, descricao, quantidade))
-            except ValueError:
-                continue  # Ignora se a quantidade não for número
-    con.commit()
-    con.close()
+    with open(caminho, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['ID', 'Produto', 'Quantidade', 'Data'])
+        writer.writerows(vendas)

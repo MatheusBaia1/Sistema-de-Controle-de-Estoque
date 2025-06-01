@@ -1,5 +1,6 @@
-import tkinter as tk
-from tkinter import messagebox, ttk, filedialog
+import customtkinter as ctk 
+from tkinter import ttk, filedialog, messagebox
+import csv
 from banco4 import (
     conectar,
     validar_login,
@@ -12,28 +13,38 @@ from banco4 import (
     exportar_saidas_csv,
     remover_produto
 )
-import csv
+
+# Define modo claro e tema azul para uma aparência mais suave
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Sistema de controle de estoque")
-        self.root.geometry("750x500")
-        self.root.configure(bg="#2c3e50")
-        conectar()
+        self.root.geometry("800x600")
+        conectar()  # Conecta com o banco de dados
         self.usuario_logado = None
-        self.tela_login()
+        self.tela_login()  # Abre a tela inicial de login
 
-    def tela_login(self):
+    def limpar_tela(self):
         for widget in self.root.winfo_children():
-            widget.destroy()
-        tk.Label(self.root, text="Login", font=("Arial", 24), bg="#2c3e50", fg="white").pack(pady=20)
-        tk.Label(self.root, text="Usuário:", bg="#2c3e50", fg="white").pack()
-        username = tk.Entry(self.root)
-        username.pack()
-        tk.Label(self.root, text="Senha:", bg="#2c3e50", fg="white").pack()
-        senha = tk.Entry(self.root, show="*")
-        senha.pack()
+            widget.destroy()  # Remove todos os widgets da tela
+
+    # Tela de login de usuário
+    def tela_login(self):
+        self.limpar_tela()
+        frame = ctk.CTkFrame(self.root, corner_radius=20)
+        frame.pack(expand=True, padx=40, pady=45)
+
+        ctk.CTkLabel(frame, text="Login", font=ctk.CTkFont(size=28, weight="bold")).pack(pady=(0, 20))
+        ctk.CTkLabel(frame, text="Usuário:", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=10)
+        username = ctk.CTkEntry(frame, width=300, height=40, corner_radius=15)
+        username.pack(pady=10)
+
+        ctk.CTkLabel(frame, text="Senha:", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=10)
+        senha = ctk.CTkEntry(frame, show="*", width=300, height=40, corner_radius=15)
+        senha.pack(pady=10)
 
         def tentar_login():
             usuario = validar_login(username.get(), senha.get())
@@ -43,16 +54,21 @@ class App:
             else:
                 messagebox.showerror("Erro", "Usuário ou senha inválidos.")
 
-        tk.Button(self.root, text="Entrar", command=tentar_login).pack(pady=10)
+        ctk.CTkButton(frame, text="Entrar", command=tentar_login, width=200, height=45, corner_radius=15).pack(pady=20)
 
+    # Tela principal após login
     def menu_principal(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        tk.Label(self.root, text=f"Bem-vindo, {self.usuario_logado[1]}!", font=("Arial", 16), bg="#2c3e50", fg="white").pack(pady=20)
+        self.limpar_tela()
+        frame = ctk.CTkFrame(self.root, corner_radius=20)
+        frame.pack(expand=True, fill="both", padx=30, pady=30)
 
+        ctk.CTkLabel(frame, text=f"Bem-vindo, {self.usuario_logado[1]}!", font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(10, 20))
+
+        # Alerta se houver produtos com estoque baixo
         if produtos_estoque_baixo():
-            tk.Label(self.root, text="⚠️ Atenção: há itens com estoque baixo!", bg="#2c3e50", fg="yellow", font=("Arial", 12)).pack(pady=5)
+            ctk.CTkLabel(frame, text="Atenção: há itens com estoque baixo!", text_color="orange", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=(0, 15))
 
+        # Lista de botões com funcionalidades principais
         botoes = [
             ("Cadastrar Produto", self.tela_cadastro_produto),
             ("Consultar Produtos", self.tela_consulta_produtos),
@@ -60,118 +76,110 @@ class App:
             ("Histórico de Saída", self.tela_historico_saida),
             ("Relatório Estoque Baixo", self.tela_estoque_baixo),
             ("Exportar CSV", self.exportar_dados),
+            ("Importar Produtos CSV", self.importar_produtos_csv),  # <-- botão novo adicionado aqui
         ]
 
+        # Acesso a funções de administrador
         if self.usuario_logado[3] == "admin":
             botoes.insert(0, ("Cadastrar Usuário", self.tela_cadastro_usuario))
-            botoes.insert(1, ("Remover Produto", self.tela_remover_produto))  
+            botoes.insert(1, ("Remover Produto", self.tela_remover_produto))
 
         for texto, comando in botoes:
-            tk.Button(self.root, text=texto, width=30, command=comando).pack(pady=5)
+            ctk.CTkButton(frame, text=texto, command=comando, width=250, height=45, corner_radius=15).pack(pady=8)
 
-        tk.Button(self.root, text="Sair", command=self.tela_login).pack(pady=20)
+        ctk.CTkButton(frame, text="Sair", command=self.tela_login, width=250, height=45, corner_radius=15).pack(pady=20)
+
+    # Cria uma janela popup reaproveitável
+    def popup_janela(self, titulo, conteudo_func):
+        popup = ctk.CTkToplevel(self.root)
+        popup.title(titulo)
+        popup.geometry("600x400")
+
+        # Garante que popup fique na frente da root e receba foco
+        popup.transient(self.root)
+        popup.grab_set()
+        popup.focus()
+
+        frame = ctk.CTkFrame(popup, corner_radius=20)
+        frame.pack(padx=25, pady=25, expand=True,)
+        conteudo_func(frame, popup)  # PASSANDO popup para permitir fechar a janela a partir da função
 
     def tela_cadastro_usuario(self):
-        self.janela_popup("Cadastro de Usuário", self.frame_cadastro_usuario)
+        self.popup_janela("Cadastro de Usuário", self.frame_cadastro_usuario)
 
-    def frame_cadastro_usuario(self, frame):
-        tk.Label(frame, text="Usuário:").grid(row=0, column=0)
-        e_user = tk.Entry(frame)
-        e_user.grid(row=0, column=1)
-        tk.Label(frame, text="Senha:").grid(row=1, column=0)
-        e_senha = tk.Entry(frame, show="*")
-        e_senha.grid(row=1, column=1)
-        tk.Label(frame, text="Tipo:").grid(row=2, column=0)
-        tipo = ttk.Combobox(frame, values=["admin", "vendedor", "usuario"])
-        tipo.grid(row=2, column=1)
+    def frame_cadastro_usuario(self, frame, popup):
+        campos = {}
+        for i, (label, var) in enumerate({"Usuário": "user", "Senha": "senha", "Tipo": "tipo"}.items()):
+            ctk.CTkLabel(frame, text=label + ":", font=ctk.CTkFont(size=14)).grid(row=i, column=0, padx=10, pady=8, sticky="w")
+            if var == "tipo":
+                campos[var] = ctk.CTkComboBox(frame, values=["admin", "vendedor", "usuario"], width=250, height=35)
+            else:
+                campos[var] = ctk.CTkEntry(frame, width=250, height=35, corner_radius=10, show="*" if var == "senha" else None)
+            campos[var].grid(row=i, column=1, padx=10, pady=8)
+
         def cadastrar():
-            if not e_user.get() or not e_senha.get() or not tipo.get():
+            if not all(c.get() for c in campos.values()):
                 messagebox.showwarning("Aviso", "Preencha todos os campos.")
                 return
-            if cadastrar_usuario(e_user.get(), e_senha.get(), tipo.get()):
+            if cadastrar_usuario(campos["user"].get(), campos["senha"].get(), campos["tipo"].get()):
                 messagebox.showinfo("Sucesso", "Usuário cadastrado.")
+                popup.destroy()  # FECHA o popup após sucesso
             else:
                 messagebox.showerror("Erro", "Nome de usuário já existe.")
-        tk.Button(frame, text="Cadastrar", command=cadastrar).grid(row=3, columnspan=2)
+
+        ctk.CTkButton(frame, text="Cadastrar", command=cadastrar, width=200, height=40, corner_radius=15).grid(row=3, columnspan=2, pady=20)
 
     def tela_cadastro_produto(self):
-        self.janela_popup("Cadastro de Produto", self.frame_cadastro_produto)
+        self.popup_janela("Cadastro de Produto", self.frame_cadastro_produto)
 
-    def frame_cadastro_produto(self, frame):
-        tk.Label(frame, text="Nome:").grid(row=0, column=0)
-        e_nome = tk.Entry(frame)
-        e_nome.grid(row=0, column=1)
-        tk.Label(frame, text="Descrição:").grid(row=1, column=0)
-        e_desc = tk.Entry(frame)
-        e_desc.grid(row=1, column=1)
-        tk.Label(frame, text="Quantidade:").grid(row=2, column=0)
-        e_quant = tk.Entry(frame)
-        e_quant.grid(row=2, column=1)
+    def frame_cadastro_produto(self, frame, popup):
+        labels = ["Nome", "Descrição", "Quantidade"]
+        entradas = []
+        for i, label in enumerate(labels):
+            ctk.CTkLabel(frame, text=label + ":", font=ctk.CTkFont(size=14)).grid(row=i, column=0, padx=10, pady=8, sticky="w")
+            entrada = ctk.CTkEntry(frame, width=250, height=35, corner_radius=10)
+            entrada.grid(row=i, column=1, padx=10, pady=8)
+            entradas.append(entrada)
 
         def cadastrar():
-            if not e_nome.get() or not e_desc.get() or not e_quant.get():
+            nome, descricao, quant = (e.get() for e in entradas)
+            if not nome or not descricao or not quant:
                 messagebox.showwarning("Aviso", "Preencha todos os campos.")
                 return
             try:
-                quantidade = int(e_quant.get())
-                adicionar_produto(e_nome.get(), e_desc.get(), quantidade)
+                adicionar_produto(nome, descricao, quantidade=int(quant))
                 messagebox.showinfo("Sucesso", "Produto cadastrado.")
+                popup.destroy()  # FECHA popup depois de sucesso
             except ValueError:
                 messagebox.showerror("Erro", "Quantidade deve ser número.")
 
-        def importar_csv():
-            caminho = filedialog.askopenfilename(
-                filetypes=[("CSV files", "*.csv")], 
-                title="Selecione o arquivo CSV"
-            )
-            if not caminho:
-                return
-            try:
-                with open(caminho, newline='', encoding='utf-8') as arquivo_csv:
-                    leitor = csv.reader(arquivo_csv)
-                    next(leitor)  # Pula o cabeçalho
-                    count = 0
-                    for linha in leitor:
-                        if len(linha) >= 3:
-                            nome_csv = linha[0].strip()
-                            desc_csv = linha[1].strip()
-                            try:
-                                quant_csv = int(linha[2])
-                                adicionar_produto(nome_csv, desc_csv, quant_csv)
-                                count += 1
-                            except ValueError:
-                                continue
-                    messagebox.showinfo("Importação concluída", f"{count} produtos importados com sucesso.")
-            except Exception as e:
-                messagebox.showerror("Erro", f"Falha ao importar CSV:\n{e}")
-
-        tk.Button(frame, text="Cadastrar", command=cadastrar).grid(row=3, columnspan=2, pady=(10, 0))
-        tk.Button(frame, text="Importar CSV", command=importar_csv).grid(row=4, columnspan=2, pady=(10, 0))
+        ctk.CTkButton(frame, text="Cadastrar", command=cadastrar, width=200, height=40, corner_radius=15).grid(row=3, columnspan=2, pady=20)
 
     def tela_consulta_produtos(self):
-        self.janela_popup("Produtos", self.frame_lista_produtos)
+        self.popup_janela("Produtos", self.frame_treeview_produtos)
 
-    def frame_lista_produtos(self, frame):
-        produtos = obter_produtos()
+    def frame_treeview_produtos(self, frame, popup=None):
+        # Exibe produtos com Treeview
         tree = ttk.Treeview(frame, columns=("Nome", "Descrição", "Quantidade"), show="headings")
-        tree.heading("Nome", text="Nome")
-        tree.heading("Descrição", text="Descrição")
-        tree.heading("Quantidade", text="Quantidade")
-        for p in produtos:
+        for col in tree["columns"]:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center")
+        for p in obter_produtos():
             tree.insert("", "end", values=(p[1], p[2], p[3]))
-        tree.pack(expand=True, fill="both")
+        tree.pack(expand=True, fill="both", padx=10, pady=10)
 
     def tela_registrar_saida(self):
-        self.janela_popup("Registrar Saída", self.frame_registrar_saida)
+        self.popup_janela("Registrar Saída", self.frame_registrar_saida)
 
-    def frame_registrar_saida(self, frame):
+    def frame_registrar_saida(self, frame, popup):
         produtos = obter_produtos()
-        tk.Label(frame, text="Produto:").grid(row=0, column=0)
-        cb = ttk.Combobox(frame, values=[f"{p[0]} - {p[1]}" for p in produtos])
-        cb.grid(row=0, column=1)
-        tk.Label(frame, text="Quantidade:").grid(row=1, column=0)
-        e_quant = tk.Entry(frame)
-        e_quant.grid(row=1, column=1)
+        ctk.CTkLabel(frame, text="Produto:", font=ctk.CTkFont(size=14)).grid(row=0, column=0, padx=10, pady=8, sticky="w")
+        cb = ctk.CTkComboBox(frame, values=[f"{p[0]} - {p[1]}" for p in produtos], width=250, height=35)
+        cb.grid(row=0, column=1, padx=10, pady=8)
+
+        ctk.CTkLabel(frame, text="Quantidade:", font=ctk.CTkFont(size=14)).grid(row=1, column=0, padx=10, pady=8, sticky="w")
+        e_quant = ctk.CTkEntry(frame, width=250, height=35, corner_radius=10)
+        e_quant.grid(row=1, column=1, padx=10, pady=8)
 
         def registrar():
             if not cb.get() or not e_quant.get():
@@ -182,72 +190,89 @@ class App:
                 quantidade = int(e_quant.get())
                 if registrar_saida(id_produto, quantidade):
                     messagebox.showinfo("Sucesso", "Saída registrada.")
+                    popup.destroy()  # FECHA popup após sucesso
                 else:
                     messagebox.showerror("Erro", "Estoque insuficiente.")
             except ValueError:
                 messagebox.showerror("Erro", "Quantidade inválida.")
 
-        tk.Button(frame, text="Registrar", command=registrar).grid(row=2, columnspan=2)
+        ctk.CTkButton(frame, text="Registrar", command=registrar, width=200, height=40, corner_radius=15).grid(row=2, columnspan=2, pady=20)
 
     def tela_historico_saida(self):
-        self.janela_popup("Histórico de Saídas", self.frame_historico)
+        self.popup_janela("Histórico de Saídas", self.frame_historico)
 
-    def frame_historico(self, frame):
-        vendas = obter_saidas()
+    def frame_historico(self, frame, popup=None):
         tree = ttk.Treeview(frame, columns=("Produto", "Quantidade", "Data"), show="headings")
-        tree.heading("Produto", text="Produto")
-        tree.heading("Quantidade", text="Quantidade")
-        tree.heading("Data", text="Data")
-        for v in vendas:
+        for col in tree["columns"]:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center")
+        for v in obter_saidas():
             tree.insert("", "end", values=(v[1], v[2], v[3]))
-        tree.pack(expand=True, fill="both")
+        tree.pack(expand=True, fill="both", padx=10, pady=10)
 
     def tela_estoque_baixo(self):
-        self.janela_popup("Estoque Baixo", self.frame_estoque_baixo)
+        self.popup_janela("Estoque Baixo", self.frame_estoque_baixo)
 
-    def frame_estoque_baixo(self, frame):
-        produtos = produtos_estoque_baixo()
-        tree = ttk.Treeview(frame, columns=("Nome", "Descrição", "Quantidade"), show="headings")
-        tree.heading("Nome", text="Nome")
-        tree.heading("Descrição", text="Descrição")
-        tree.heading("Quantidade", text="Quantidade")
-        for p in produtos:
-            tree.insert("", "end", values=(p[1], p[2], p[3]))
-        tree.pack(expand=True, fill="both")
+    def frame_estoque_baixo(self, frame, popup=None):
+        tree = ttk.Treeview(frame, columns=("Nome", "Quantidade"), show="headings")
+        for col in tree["columns"]:
+            tree.heading(col, text=col)
+            tree.column(col, anchor="center")
+        for p in produtos_estoque_baixo():
+            tree.insert("", "end", values=(p[1], p[3]))
+        tree.pack(expand=True, fill="both", padx=10, pady=10)
 
     def exportar_dados(self):
-        caminho = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        caminho = filedialog.asksaveasfilename(defaultextension=".csv")
         if caminho:
             exportar_saidas_csv(caminho)
-            messagebox.showinfo("Sucesso", "Arquivo CSV exportado.")
+            messagebox.showinfo("Sucesso", "Dados exportados para CSV.")
 
     def tela_remover_produto(self):
-        self.janela_popup("Remover Produto", self.frame_remover_produto)
+        self.popup_janela("Remover Produto", self.frame_remover_produto)
 
-    def frame_remover_produto(self, frame):
+    def frame_remover_produto(self, frame, popup):
         produtos = obter_produtos()
-        tk.Label(frame, text="Selecione o produto para remover:").pack()
-        cb = ttk.Combobox(frame, values=[f"{p[0]} - {p[1]}" for p in produtos])
-        cb.pack()
+        ctk.CTkLabel(frame, text="Selecione o produto para remover:", font=ctk.CTkFont(size=14)).pack(pady=15)
+        cb = ctk.CTkComboBox(frame, values=[f"{p[0]} - {p[1]}" for p in produtos], width=300, height=35)
+        cb.pack(pady=15)
 
         def remover():
             if not cb.get():
                 messagebox.showwarning("Aviso", "Selecione um produto.")
                 return
-            id_produto = int(cb.get().split(" - ")[0])
-            remover_produto(id_produto)
-            messagebox.showinfo("Sucesso", "Produto removido.")
+            produto_id = int(cb.get().split(" - ")[0])
+            if remover_produto(produto_id):
+                messagebox.showinfo("Sucesso", "Produto removido.")
+                popup.destroy()  # FECHA popup após sucesso
+            else:
+                messagebox.showerror("Erro", "Erro ao remover produto.")
 
-        tk.Button(frame, text="Remover", command=remover).pack(pady=10)
+        ctk.CTkButton(frame, text="Remover", command=remover, width=200, height=40, corner_radius=15).pack(pady=20)
 
-    def janela_popup(self, titulo, func_frame):
-        popup = tk.Toplevel()
-        popup.title(titulo)
-        frame = tk.Frame(popup)
-        frame.pack(padx=10, pady=10)
-        func_frame(frame)
+    # Nova funcionalidade: importar produtos via CSV
+    def importar_produtos_csv(self):
+        caminho = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if not caminho:
+            return
+        try:
+            with open(caminho, newline="", encoding="utf-8") as f:
+                leitor = csv.reader(f)
+                cabecalho = next(leitor)
+                for linha in leitor:
+                    if len(linha) < 3:
+                        continue
+                    nome, descricao, quant = linha[0], linha[1], linha[2]
+                    try:
+                        adicionar_produto(nome, descricao, int(quant))
+                    except Exception:
+                        pass  # Pode melhorar tratamento
+            messagebox.showinfo("Sucesso", "Produtos importados via CSV.")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao importar CSV: {str(e)}")
+
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = ctk.CTk()
     app = App(root)
     root.mainloop()

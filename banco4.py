@@ -4,6 +4,7 @@ import csv
 
 # Conexão com banco
 def conectar():
+    import sqlite3
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
 
@@ -12,7 +13,7 @@ def conectar():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         senha TEXT NOT NULL,
-        tipo TEXT NOT NULL CHECK (tipo IN ('admin', 'vendedor', 'usuario'))
+        tipo TEXT NOT NULL CHECK (tipo IN ('Gerente', 'Funcionário'))
     )''')
 
     cur.execute('''CREATE TABLE IF NOT EXISTS produtos (
@@ -30,10 +31,39 @@ def conectar():
         FOREIGN KEY (produto_id) REFERENCES produtos(id)
     )''')
 
-    # Admin padrão
+    # Usuário admin padrão
     cur.execute("SELECT * FROM usuarios WHERE username = 'admin'")
     if not cur.fetchone():
-        cur.execute("INSERT INTO usuarios (username, senha, tipo) VALUES (?, ?, ?)", ("admin", "admin", "admin"))
+        cur.execute("INSERT INTO usuarios (username, senha, tipo) VALUES (?, ?, ?)", ("admin", "admin", "Gerente"))
+
+    # Produtos padrão
+    produtos_padrao = [
+        ('Expanfix manual', 'Ferramenta manual para expansão de tubos.', 5),
+        ('Tinta spray preto', 'Tinta em spray na cor preta para uso geral.', 10),
+        ('Descabonizante', 'Produto químico para limpeza de resíduos de carbono.', 8),
+        ('Condensador', 'Componente de refrigeração para sistemas de ar-condicionado.', 4),
+        ('Evaporador', 'Parte do sistema de refrigeração responsável pela troca térmica.', 6),
+        ('Ventilador 220', 'Ventilador elétrico para uso em sistemas de 220V.', 3),
+        ('Ventilador 12v', 'Ventilador pequeno para sistemas de 12V.', 5),
+        ('Ventilador 24v', 'Ventilador compacto para sistemas de 24V.', 5),
+        ('Gas mapp', 'Gás utilizado em soldagem e aquecimento de materiais.', 7),
+        ('Capacitores', 'Componentes eletrônicos para armazenamento de energia.', 12),
+        ('Filtro secador 164', 'Filtro para remoção de umidade e impurezas em sistemas de refrigeração.', 6),
+        ('Filtro secador 163', 'Filtro secador para sistemas de refrigeração.', 6),
+        ('Filtro secador DML 164fs', 'Filtro de alta eficiência para sistemas de refrigeração.', 4),
+        ('Filtro secador DML 163fs', 'Filtro de alta eficiência para sistemas menores.', 4),
+        ('Filtro secador 032s', 'Filtro secador modelo 032s.', 3),
+        ('Filtro secador 032', 'Filtro secador modelo 032.', 3),
+        ('Valvula xiraide 6mm', 'Válvula de 6mm para controle de fluxo.', 5),
+        ('Tc 900 12 v ou 24 v', 'Controlador de temperatura para sistemas de 12V ou 24V.', 2),
+        ('Tc 900 220v', 'Controlador de temperatura para sistemas de 220V.', 2),
+        ('Disjuntor', 'Dispositivo de proteção elétrica contra sobrecargas.', 8)
+    ]
+
+    for nome, descricao, quantidade in produtos_padrao:
+        cur.execute("SELECT id FROM produtos WHERE nome = ?", (nome,))
+        if not cur.fetchone():
+            cur.execute("INSERT INTO produtos (nome, descricao, quantidade) VALUES (?, ?, ?)", (nome, descricao, quantidade))
 
     con.commit()
     con.close()
@@ -169,26 +199,18 @@ def excluir_saida(venda_id):
         con.commit()
     con.close()
 
-def editar_saida(venda_id, nova_quantidade):
+def editar_quantidade_produto(produto_id, nova_quantidade):
     con = sqlite3.connect("sistema.db")
     cur = con.cursor()
-    cur.execute("SELECT produto_id, quantidade FROM vendas WHERE id=?", (venda_id,))
-    venda = cur.fetchone()
-    if venda:
-        produto_id, qtd_antiga = venda
-        cur.execute("SELECT quantidade FROM produtos WHERE id=?", (produto_id,))
-        estoque_atual = cur.fetchone()[0]
-        diferenca = nova_quantidade - qtd_antiga
-        if estoque_atual >= diferenca:
-            cur.execute("UPDATE vendas SET quantidade=? WHERE id=?", (nova_quantidade, venda_id))
-            cur.execute("UPDATE produtos SET quantidade = quantidade - ? WHERE id=?", (diferenca, produto_id))
-            con.commit()
-            sucesso = True
-        else:
-            sucesso = False
-    else:
+    try:
+        cur.execute("UPDATE produtos SET quantidade=? WHERE id=?", (nova_quantidade, produto_id))
+        con.commit()
+        sucesso = cur.rowcount > 0
+    except Exception as e:
+        print(f"Erro ao editar quantidade do produto: {e}")
         sucesso = False
-    con.close()
+    finally:
+        con.close()
     return sucesso
 
 def exportar_saidas_csv(caminho):

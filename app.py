@@ -1,5 +1,5 @@
 import customtkinter as ctk 
-from PIL import Image, ImageTk
+from PIL import Image
 from tkinter import ttk, filedialog, messagebox
 import csv
 import os
@@ -41,12 +41,12 @@ class App:
         caminho_imagem = os.path.join("imagens/logo.png")
         imagem_pil = Image.open(caminho_imagem)
         imagem_pil = imagem_pil.resize((150, 150))
-        imagem_tk = ImageTk.PhotoImage(imagem_pil)
 
-        label_imagem = ctk.CTkLabel(frame, image=imagem_tk, text="")
-        label_imagem.image = imagem_tk
+        imagem_ctk = ctk.CTkImage(light_image=imagem_pil, dark_image=imagem_pil, size=(150, 150))
+
+        label_imagem = ctk.CTkLabel(frame, image=imagem_ctk, text="")
+        label_imagem.image = imagem_ctk
         label_imagem.pack(pady=10)
-
 
         ctk.CTkLabel(frame, text="Login", font=ctk.CTkFont(size=28, weight="bold")).pack(pady=(0, 20))
         ctk.CTkLabel(frame, text="Usuário:", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=10)

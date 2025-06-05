@@ -34,13 +34,3 @@ Criar uma solução simples e funcional que permita:
 - SQLite (Banco de Dados)
 - CSV (Importação/Exportação de dados)
 
-## 🧱 Estrutura do Projeto
-
-controle-estoque-camaras-frias/
-├── app4.py # Interface gráfica com CustomTkinter
-├── banco.py # Backend: funções de manipulação do banco de dados SQLite
-├── produtos.csv # Arquivo de exemplo para importação de produtos
-├── README.md # Documentação do projeto
-├── screenshot.png # Imagem da interface (opcional)
-├── /pycache/ # Cache automático do Python
-├── estoque.db # Banco de dados SQLite (gerado automaticamente ao rodar)

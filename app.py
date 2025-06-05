@@ -37,6 +37,16 @@ class App:
         self.limpar_tela()
         frame = ctk.CTkFrame(self.root, corner_radius=20)
         frame.pack(expand=True, padx=40, pady=45)
+        # Adiciona imagem ao frame de login
+        caminho_imagem = os.path.join("imagens/logo.png")
+        imagem_pil = Image.open(caminho_imagem)
+        imagem_pil = imagem_pil.resize((150, 150))
+        imagem_tk = ImageTk.PhotoImage(imagem_pil)
+
+        label_imagem = ctk.CTkLabel(frame, image=imagem_tk, text="")
+        label_imagem.image = imagem_tk
+        label_imagem.pack(pady=10)
+
 
         ctk.CTkLabel(frame, text="Login", font=ctk.CTkFont(size=28, weight="bold")).pack(pady=(0, 20))
         ctk.CTkLabel(frame, text="Usuário:", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=10)

@@ -25,12 +25,12 @@ Criar uma solução simples e funcional que permita:
 - ✅ Histórico completo de movimentações
 - ✅ Sistema de login e controle de usuários
 - ✅ Interface gráfica intuitiva (usando CustomTkinter)
-- ✅ Banco de dados local com SQLite
+- ✅ Banco de dados local com SQLite3
 
 ## 🛠️ Tecnologias Utilizadas
 
 - Python
 - CustomTkinter (Interface Gráfica)
-- SQLite (Banco de Dados)
+- SQLite3 (Banco de Dados)
 - CSV (Importação/Exportação de dados)
 

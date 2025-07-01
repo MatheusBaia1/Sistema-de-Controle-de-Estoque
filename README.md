@@ -37,7 +37,7 @@ Oferecer uma aplicação funcional que permita:
 ## 🖼️ Demonstrações da Interface
 
 **Tela de Login**  
-![Login](https://github.com/user-attachments/assets/8dfae55d-1467-4ece-9d9a-3ec355c7cb8e)
+![Login]()
 
 **Tela Principal**  
 ![TelaPrincipal](https://github.com/user-attachments/assets/38e6fc33-e7b9-4dd7-a741-8a8ffcc0b7c5)

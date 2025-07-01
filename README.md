@@ -34,25 +34,20 @@ Oferecer uma aplicação funcional que permita:
 - SQLite3 (Banco de Dados)  
 - CSV (Importação/Exportação de dados)  
 
----
-
 ## 📥 Regras para Importação de Produtos via CSV
 
-Para utilizar corretamente a funcionalidade de **importação de produtos**, é necessário seguir a estrutura e o formato abaixo no arquivo `.csv`:
+Para utilizar corretamente a funcionalidade de **importação de produtos**, o arquivo `.csv` deve seguir as regras abaixo:
 
-- A ordem das colunas deve ser exatamente:
-  1. **Nome**
-  2. **Descrição**
-  3. **Quantidade**
+- As colunas devem estar na ordem correta, lado a lado, separadas por vírgula, exatamente assim:  
+  **Nome, Descrição, Quantidade**
 
-- **Regras de formatação obrigatórias:**
-  - Os títulos das colunas devem iniciar com letra maiúscula .
-  - Os campos de texto (Nome e Descrição) devem conter a **acentuação correta** (ex.: "Descrição", "Câmara", "Evaporador").
+- **Regras de formatação obrigatórias:**  
+  - Os títulos das colunas devem começar com **letra maiúscula**.  
+  - Os campos de texto (Nome e Descrição) devem conter a **acentuação correta** (ex.: "Descrição", "Câmara", "Evaporador").  
   - A coluna **Quantidade** deve conter apenas **valores numéricos inteiros**.
 
-> ⚠️ Arquivos fora desse padrão poderão causar erros na importação ou inserção incorreta dos dados.
+> ⚠️ Arquivos fora desse padrão podem causar erros na importação ou inserção incorreta dos dados.
 
----
 
 ## 🖼️ Demonstrações da Interface
 

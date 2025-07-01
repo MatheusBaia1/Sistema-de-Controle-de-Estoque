@@ -38,15 +38,6 @@ class App:
         frame = ctk.CTkFrame(self.root, corner_radius=20)
         frame.pack(expand=True, padx=40, pady=45)
 
-        caminho_imagem = os.path.join("logo.png")
-        imagem_pil = Image.open(caminho_imagem)
-        imagem_pil = imagem_pil.resize((150, 150))
-        imagem_tk = ImageTk.PhotoImage(imagem_pil)
-        logo_label = ctk.CTkLabel(frame, image=imagem_tk, text="")
-        logo_label.image = imagem_tk  # Manter referência para evitar coleta de lixo
-        logo_label.pack(pady=(10, 20))
-        ctk.CTkFrame(frame, height=2).pack(fill="x", padx=20, pady=(0, 20))
-
         ctk.CTkLabel(frame, text="Login", font=ctk.CTkFont(size=28, weight="bold")).pack(pady=(0, 20))
         ctk.CTkLabel(frame, text="Usuário:", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=10)
         username = ctk.CTkEntry(frame, width=300, height=40, corner_radius=15)

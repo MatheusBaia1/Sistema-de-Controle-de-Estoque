@@ -46,7 +46,7 @@ Para utilizar corretamente a funcionalidade de **importação de produtos**, é 
   3. **Quantidade**
 
 - **Regras de formatação obrigatórias:**
-  - Os títulos das colunas devem iniciar com **letra maiúscula**.
+  - Os títulos das colunas devem iniciar com letra maiúscula .
   - Os campos de texto (Nome e Descrição) devem conter a **acentuação correta** (ex.: "Descrição", "Câmara", "Evaporador").
   - A coluna **Quantidade** deve conter apenas **valores numéricos inteiros**.
 
